@@ -65,8 +65,9 @@ struct AirLedCtl {
 }
 
 impl AirLedCtl {
-    const LEFT_JOYSTICK: u8 = 1;
-    const RIGHT_JOYSTICK: u8 = 2;
+    // const LEFT_JOYSTICK: u8 = 1;
+    // const RIGHT_JOYSTICK: u8 = 2;
+    const ALL_JOYSTICK: u8 = 3;
 
     const RIGHT_LED: u8 = 1;
     const BOTTOM_LED: u8 = 2;
@@ -117,21 +118,26 @@ impl LedCtl for AirLedCtl {
     fn probe() -> bool {
         let vendor = fs::read_to_string("/sys/class/dmi/id/board_vendor").unwrap_or("asdf".into());
         let name = fs::read_to_string("/sys/class/dmi/id/board_name").unwrap_or("asdf".into());
-        let supported_devices: [&str; 4] = ["AIR", "AIR Pro", "AYANEO 2", "GEEK"];
+        let supported_devices: [&str; 6] = ["AIR", "AIR Pro", "AYANEO 2", "GEEK", "AYANEO 2S", "GEEK 1S"];
         let is_supported = vendor.trim() == "AYANEO" && supported_devices.contains(&name.trim());
 
         is_supported
     }
     fn set_rgb(&mut self, color: (u8, u8, u8)) {
-        self.set_pixel(Self::LEFT_JOYSTICK, Self::RIGHT_LED, color);
-        self.set_pixel(Self::LEFT_JOYSTICK, Self::BOTTOM_LED, color);
-        self.set_pixel(Self::LEFT_JOYSTICK, Self::LEFT_LED, color);
-        self.set_pixel(Self::LEFT_JOYSTICK, Self::TOP_LED, color);
+        // self.set_pixel(Self::LEFT_JOYSTICK, Self::RIGHT_LED, color);
+        // self.set_pixel(Self::LEFT_JOYSTICK, Self::BOTTOM_LED, color);
+        // self.set_pixel(Self::LEFT_JOYSTICK, Self::LEFT_LED, color);
+        // self.set_pixel(Self::LEFT_JOYSTICK, Self::TOP_LED, color);
 
-        self.set_pixel(Self::RIGHT_JOYSTICK, Self::RIGHT_LED, color);
-        self.set_pixel(Self::RIGHT_JOYSTICK, Self::BOTTOM_LED, color);
-        self.set_pixel(Self::RIGHT_JOYSTICK, Self::LEFT_LED, color);
-        self.set_pixel(Self::RIGHT_JOYSTICK, Self::TOP_LED, color);
+        // self.set_pixel(Self::RIGHT_JOYSTICK, Self::RIGHT_LED, color);
+        // self.set_pixel(Self::RIGHT_JOYSTICK, Self::BOTTOM_LED, color);
+        // self.set_pixel(Self::RIGHT_JOYSTICK, Self::LEFT_LED, color);
+        // self.set_pixel(Self::RIGHT_JOYSTICK, Self::TOP_LED, color);
+
+        self.set_pixel(Self::ALL_JOYSTICK, Self::RIGHT_LED, color);
+        self.set_pixel(Self::ALL_JOYSTICK, Self::BOTTOM_LED, color);
+        self.set_pixel(Self::ALL_JOYSTICK, Self::LEFT_LED, color);
+        self.set_pixel(Self::ALL_JOYSTICK, Self::TOP_LED, color);
     }
     fn supports_rgb(&self) -> bool {
         true
@@ -167,9 +173,9 @@ struct Theme {
 impl Default for Theme {
     fn default() -> Self {
         Self {
-            charging: (0, 0, 255),
-            low_bat: (255, 0, 0),
-            full: (0, 255, 255),
+            charging: (0, 0, 0),
+            low_bat: (0, 0, 0),
+            full: (0, 0, 0),
             normal: (0, 0, 0),
         }
     }
@@ -278,6 +284,7 @@ fn main() {
 
     println!("Found battery at {:?}", &battery_dir);
     let mut old = (0, 0, 0);
+    let mut old_status = String::from("Discharging");
     loop {
         let capacity = fs::read_to_string(&battery_cap_path).expect("Failed to read battery capacity").trim().parse::<u8>().unwrap_or(0);
         let status = fs::read_to_string(&battery_status_path).expect("Failed to read battery status");
@@ -301,10 +308,14 @@ fn main() {
         let adjusted_color = (tmp.0 as u8, tmp.1 as u8, tmp.2 as u8);
         let force_set = JUST_RESUMED.swap(false, Ordering::SeqCst);
 
-        if old != adjusted_color || force_set {
-            led_ctl.set_rgb(adjusted_color);
+        if old != adjusted_color || old_status != status || force_set {
+            println!("Setting color to {:?}", adjusted_color);
+            for _ in 0..2 {
+                led_ctl.set_rgb(adjusted_color);
+            }
             old = adjusted_color;
+            old_status = status;
         }
-        thread::sleep(Duration::from_millis(100));
+        thread::sleep(Duration::from_millis(1000));
     }
 }
