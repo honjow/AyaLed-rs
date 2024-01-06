@@ -59,7 +59,8 @@ impl LedCtl for AirPlusLedCtl {
         let vendor = fs::read_to_string("/sys/class/dmi/id/board_vendor").unwrap_or("asdf".into());
         let name = fs::read_to_string("/sys/class/dmi/id/product_name").unwrap_or("asdf".into());
 
-        return vendor.trim() == "AYANEO" && name.trim() == "AIR Plus";
+        let supported_devices: [&str; 2] = ["AIR Plus", "SLIDE"];
+        return vendor.trim() == "AYANEO" && supported_devices.contains(&name.trim());
     }
 }
 
